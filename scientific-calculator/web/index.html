@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced Scientific Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .calculator {
+      background: #1a1a2e;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+      width: 420px;
+      max-width: 98vw;
+    }
+
+    h1 {
+      text-align: center;
+      color: #e0e0e0;
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0.55;
+    }
+
+    /* ── Display ── */
+    .display {
+      background: #0d0d1a;
+      border-radius: 12px;
+      padding: 16px 18px 12px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .display .expression {
+      min-height: 20px;
+      color: #7c7c9e;
+      font-size: 13px;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display .main {
+      color: #ffffff;
+      font-size: 36px;
+      font-weight: 700;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 4px;
+      transition: font-size 0.1s;
+    }
+
+    .display .main.long  { font-size: 24px; }
+    .display .main.vlong { font-size: 18px; }
+
+    .display .mem-ind {
+      color: #a78bfa;
+      font-size: 11px;
+      margin-top: 4px;
+      min-height: 15px;
+    }
+
+    /* ── Mode bar ── */
+    .mode-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: #0d0d1a;
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-toggle button {
+      background: transparent;
+      border: none;
+      color: #7c7c9e;
+      padding: 4px 13px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .mode-toggle button.active {
+      background: #7c3aed;
+      color: #fff;
+    }
+
+    .hist-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #7c7c9e;
+      padding: 4px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .hist-btn:hover { border-color: #7c3aed; color: #a78bfa; }
+
+    /* ── Button grid ── */
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+    }
+
+    button.btn {
+      background: #16213e;
+      color: #e0e0e0;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+      height: 52px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s, box-shadow 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    button.btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    button.btn:active { transform: translateY(0);    box-shadow: none; }
+
+    button.btn.sci  { background: #0f2040; color: #93c5fd; }
+    button.btn.sci:hover { background: #163060; }
+
+    button.btn.op   { background: #1a103a; color: #c4b5fd; }
+    button.btn.op:hover  { background: #261650; }
+
+    button.btn.eq   { background: #7c3aed; color: #fff; }
+    button.btn.eq:hover  { background: #6d28d9; }
+
+    button.btn.clr  { background: #3b0a0a; color: #fca5a5; }
+    button.btn.clr:hover { background: #5a1010; }
+
+    button.btn.mem  { background: #0a2a1a; color: #6ee7b7; font-size: 12px; }
+    button.btn.mem:hover { background: #0d3d25; }
+
+    button.btn.num  { background: #1c1c30; color: #f0f0f0; }
+    button.btn.num:hover { background: #252540; }
+
+    button.btn.ans  { background: #0f2a2a; color: #67e8f9; }
+    button.btn.ans:hover { background: #1a4040; }
+
+    button.btn.span2 { grid-column: span 2; }
+
+    /* ── History panel ── */
+    .hist-panel {
+      display: none;
+      background: #0d0d1a;
+      border-radius: 12px;
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.07);
+      max-height: 190px;
+      overflow-y: auto;
+    }
+    .hist-panel.open { display: block; }
+    .hist-panel h2 {
+      color: #7c7c9e;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 9px 14px 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .hist-item {
+      padding: 7px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      cursor: pointer;
+    }
+    .hist-item:hover { background: rgba(255,255,255,0.03); }
+    .hist-item .he { color: #7c7c9e; font-size: 11px; }
+    .hist-item .hr { color: #e0e0e0; font-size: 15px; text-align: right; }
+    .hist-empty { color: #555; font-size: 12px; padding: 14px; text-align: center; }
+
+    .hist-panel::-webkit-scrollbar { width: 4px; }
+    .hist-panel::-webkit-scrollbar-thumb { background: #7c3aed55; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="calculator">
+  <h1>Scientific Calculator</h1>
+
+  <div class="display">
+    <div class="expression" id="expression"></div>
+    <div class="main" id="display">0</div>
+    <div class="mem-ind" id="memInd"></div>
+  </div>
+
+  <div class="mode-row">
+    <div class="mode-toggle">
+      <button id="btnDEG" class="active" onclick="setMode('DEG')">DEG</button>
+      <button id="btnRAD"              onclick="setMode('RAD')">RAD</button>
+      <button id="btnGRAD"             onclick="setMode('GRAD')">GRAD</button>
+    </div>
+    <button class="hist-btn" onclick="toggleHist()">History ▾</button>
+  </div>
+
+  <div class="buttons">
+    <!-- Memory row -->
+    <button class="btn mem" onclick="mClear()">MC</button>
+    <button class="btn mem" onclick="mRecall()">MR</button>
+    <button class="btn mem" onclick="mAdd()">M+</button>
+    <button class="btn mem" onclick="mSub()">M−</button>
+    <button class="btn mem" onclick="mStore()">MS</button>
+
+    <!-- Trig row 1 -->
+    <button class="btn sci" onclick="applyFn('sin')">sin</button>
+    <button class="btn sci" onclick="applyFn('cos')">cos</button>
+    <button class="btn sci" onclick="applyFn('tan')">tan</button>
+    <button class="btn sci" onclick="applyFn('asin')">sin⁻¹</button>
+    <button class="btn sci" onclick="applyFn('acos')">cos⁻¹</button>
+
+    <!-- Trig / log row 2 -->
+    <button class="btn sci" onclick="applyFn('atan')">tan⁻¹</button>
+    <button class="btn sci" onclick="applyFn('log')">log</button>
+    <button class="btn sci" onclick="applyFn('ln')">ln</button>
+    <button class="btn sci" onclick="applyFn('log2')">log₂</button>
+    <button class="btn sci" onclick="applyFn('exp')">eˣ</button>
+
+    <!-- Powers / roots -->
+    <button class="btn sci" onclick="applyFn('sqrt')">√x</button>
+    <button class="btn sci" onclick="applyFn('cbrt')">∛x</button>
+    <button class="btn sci" onclick="applyFn('sq')">x²</button>
+    <button class="btn sci" onclick="applyFn('cube')">x³</button>
+    <button class="btn sci" onclick="startPower()">xʸ</button>
+
+    <!-- Misc sci -->
+    <button class="btn sci" onclick="applyFn('inv')">1/x</button>
+    <button class="btn sci" onclick="applyFn('abs')">|x|</button>
+    <button class="btn sci" onclick="applyFn('fact')">x!</button>
+    <button class="btn sci" onclick="insertConst('pi')">π</button>
+    <button class="btn sci" onclick="insertConst('e')">e</button>
+
+    <!-- Clear / ops -->
+    <button class="btn clr" onclick="allClear()">AC</button>
+    <button class="btn clr" onclick="clearEntry()">CE</button>
+    <button class="btn clr" onclick="backspace()">⌫</button>
+    <button class="btn op"  onclick="inputPct()">%</button>
+    <button class="btn op"  onclick="inputOp('/')">÷</button>
+
+    <!-- Digit rows -->
+    <button class="btn num" onclick="inputNum('7')">7</button>
+    <button class="btn num" onclick="inputNum('8')">8</button>
+    <button class="btn num" onclick="inputNum('9')">9</button>
+    <button class="btn op"  onclick="inputOp('*')">×</button>
+    <button class="btn sci" onclick="inputOp('%')">mod</button>
+
+    <button class="btn num" onclick="inputNum('4')">4</button>
+    <button class="btn num" onclick="inputNum('5')">5</button>
+    <button class="btn num" onclick="inputNum('6')">6</button>
+    <button class="btn op"  onclick="inputOp('-')">−</button>
+    <button class="btn sci" onclick="toggleSign()">+/−</button>
+
+    <button class="btn num" onclick="inputNum('1')">1</button>
+    <button class="btn num" onclick="inputNum('2')">2</button>
+    <button class="btn num" onclick="inputNum('3')">3</button>
+    <button class="btn op"  onclick="inputOp('+')">+</button>
+    <button class="btn ans" onclick="recallAns()">ANS</button>
+
+    <!-- Last row -->
+    <button class="btn num span2" onclick="inputNum('0')">0</button>
+    <button class="btn num" onclick="inputDot()">.</button>
+    <button class="btn sci" onclick="openParen()">(</button>
+    <button class="btn eq"  onclick="calculate()">=</button>
+  </div>
+
+  <div class="hist-panel" id="histPanel">
+    <h2>Calculation History</h2>
+    <div id="histList"><div class="hist-empty">No history yet</div></div>
+  </div>
+</div>
+
+<script>
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const MAX_DIGITS   = 15;
+  const MAX_HISTORY  = 50;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let disp      = '0';
+  let expr      = '';
+  let mem       = 0;
+  let ans       = 0;
+  let mode      = 'DEG';   // DEG | RAD | GRAD
+  let freshEntry = true;
+  let history   = [];
+  let powerMode = false;
+
+  // ── Angle conversions ──────────────────────────────────────────────────────
+  function toRad(x) {
+    if (mode === 'RAD')  return x;
+    if (mode === 'GRAD') return x * Math.PI / 200;
+    return x * Math.PI / 180;
+  }
+  function fromRad(x) {
+    if (mode === 'RAD')  return x;
+    if (mode === 'GRAD') return x * 200 / Math.PI;
+    return x * 180 / Math.PI;
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function factorial(n) {
+    n = Math.round(n);
+    if (n < 0)   return NaN;
+    if (n > 170) return Infinity;
+    let r = 1;
+    for (let i = 2; i <= n; i++) r *= i;
+    return r;
+  }
+
+  function fmt(v) {
+    if (!isFinite(v)) return isNaN(v) ? 'Error' : (v > 0 ? '∞' : '-∞');
+    return parseFloat(v.toPrecision(12)).toString();
+  }
+
+  function updateDisplay() {
+    const el = document.getElementById('display');
+    el.textContent = disp;
+    el.className = 'main' + (disp.length > 18 ? ' vlong' : disp.length > 12 ? ' long' : '');
+    document.getElementById('expression').textContent = expr;
+    document.getElementById('memInd').textContent = mem !== 0 ? `M: ${fmt(mem)}` : '';
+  }
+
+  // ── Mode ───────────────────────────────────────────────────────────────────
+  function setMode(m) {
+    mode = m;
+    ['DEG','RAD','GRAD'].forEach(x =>
+      document.getElementById('btn' + x).classList.toggle('active', x === m));
+  }
+
+  // ── Number input ───────────────────────────────────────────────────────────
+  function inputNum(n) {
+    if (powerMode) { expr += n; updateDisplay(); return; }
+    if (freshEntry || disp === '0') {
+      disp = n; freshEntry = false;
+    } else {
+      if (disp.replace(/^-/, '').length >= MAX_DIGITS) return;
+      disp += n;
+    }
+    updateDisplay();
+  }
+
+  function inputDot() {
+    if (powerMode) return;
+    if (freshEntry) { disp = '0.'; freshEntry = false; }
+    else if (!disp.includes('.')) disp += '.';
+    updateDisplay();
+  }
+
+  function inputOp(op) {
+    powerMode = false;
+    expr      = fmt(parseFloat(disp)) + op;
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function inputPct() {
+    disp = fmt(parseFloat(disp) / 100);
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function toggleSign() {
+    if (disp === '0' || disp === 'Error') return;
+    disp = disp.startsWith('-') ? disp.slice(1) : '-' + disp;
+    updateDisplay();
+  }
+
+  function openParen() {
+    expr += '(';
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function backspace() {
+    if (freshEntry || disp === 'Error') { disp = '0'; freshEntry = false; }
+    else disp = disp.length > 1 ? disp.slice(0, -1) : '0';
+    updateDisplay();
+  }
+
+  function clearEntry() { disp = '0'; freshEntry = false; updateDisplay(); }
+
+  function allClear() {
+    disp = '0'; expr = ''; freshEntry = true; powerMode = false; updateDisplay();
+  }
+
+  // ── Scientific functions ───────────────────────────────────────────────────
+  function applyFn(fn) {
+    powerMode = false;
+    const v = parseFloat(disp);
+    const fnMap = {
+      sin:  x => Math.sin(toRad(x)),
+      cos:  x => Math.cos(toRad(x)),
+      tan:  x => Math.tan(toRad(x)),
+      asin: x => fromRad(Math.asin(x)),
+      acos: x => fromRad(Math.acos(x)),
+      atan: x => fromRad(Math.atan(x)),
+      log:  x => Math.log10(x),
+      ln:   x => Math.log(x),
+      log2: x => Math.log2(x),
+      exp:  x => Math.exp(x),
+      sqrt: x => Math.sqrt(x),
+      cbrt: x => Math.cbrt(x),
+      sq:   x => x * x,
+      cube: x => x ** 3,
+      inv:  x => 1 / x,
+      abs:  x => Math.abs(x),
+      fact: x => factorial(x),
+    };
+    const labels = {
+      sin:'sin', cos:'cos', tan:'tan', asin:'sin⁻¹', acos:'cos⁻¹', atan:'tan⁻¹',
+      log:'log', ln:'ln', log2:'log₂', exp:'eˣ', sqrt:'√', cbrt:'∛',
+      sq:'²', cube:'³', inv:'1/', abs:'|  |', fact:'!',
+    };
+    const r = fnMap[fn](v);
+    expr = `${labels[fn]}(${fmt(v)}) =`;
+    disp = fmt(r);
+    ans  = r;
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function startPower() {
+    powerMode = true;
+    expr = fmt(parseFloat(disp)) + '^';
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function insertConst(c) {
+    disp = fmt(c === 'pi' ? Math.PI : Math.E);
+    freshEntry = true;
+    updateDisplay();
+  }
+
+  function recallAns() {
+    disp = fmt(ans); freshEntry = true; updateDisplay();
+  }
+
+  // ── Calculate ──────────────────────────────────────────────────────────────
+  function calculate() {
+    if (powerMode) {
+      const parts = expr.split('^');
+      const base  = parseFloat(parts[0]);
+      const exp   = parseFloat(disp);
+      const r     = Math.pow(base, exp);
+      const eStr  = `${fmt(base)} ^ ${fmt(exp)} =`;
+      pushHistory(eStr, fmt(r));
+      expr = eStr; disp = fmt(r); ans = r;
+      powerMode = false; freshEntry = true;
+      updateDisplay();
+      return;
+    }
+
+    const m = expr.match(/^(-?[\d.]+(?:e[+\-]?\d+)?)([+\-*/%])$/);
+    if (!m) { ans = parseFloat(disp); updateDisplay(); return; }
+
+    const a  = parseFloat(m[1]);
+    const op = m[2].trim();
+    const b  = parseFloat(disp);
+    const opFn = {
+      '+': (x,y) => x + y,
+      '-': (x,y) => x - y,
+      '*': (x,y) => x * y,
+      '/': (x,y) => y === 0 ? (x >= 0 ? Infinity : -Infinity) : x / y,
+      '%': (x,y) => x % y,
+    };
+    const r    = (opFn[op] || ((x,y) => y))(a, b);
+    const sym  = { '+':'+', '-':'−', '*':'×', '/':'÷', '%':'mod' };
+    const eStr = `${fmt(a)} ${sym[op] || op} ${fmt(b)} =`;
+    pushHistory(eStr, fmt(r));
+    expr = eStr; disp = fmt(r); ans = r; freshEntry = true;
+    updateDisplay();
+  }
+
+  // ── Memory ─────────────────────────────────────────────────────────────────
+  function mStore()  { mem = parseFloat(disp); updateDisplay(); }
+  function mRecall() { disp = fmt(mem); freshEntry = true; updateDisplay(); }
+  function mAdd()    { mem += parseFloat(disp); updateDisplay(); }
+  function mSub()    { mem -= parseFloat(disp); updateDisplay(); }
+  function mClear()  { mem = 0; updateDisplay(); }
+
+  // ── History ────────────────────────────────────────────────────────────────
+  function pushHistory(e, r) {
+    history.unshift({ e, r });
+    while (history.length > MAX_HISTORY) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('histList');
+    if (!history.length) {
+      list.innerHTML = '<div class="hist-empty">No history yet</div>';
+      return;
+    }
+    list.innerHTML = history.map((h, i) =>
+      `<div class="hist-item" onclick="useHistory(${i})">
+        <div class="he">${h.e}</div>
+        <div class="hr">${h.r}</div>
+      </div>`
+    ).join('');
+  }
+
+  function useHistory(i) {
+    disp = history[i].r; freshEntry = true; updateDisplay();
+  }
+
+  function toggleHist() {
+    document.getElementById('histPanel').classList.toggle('open');
+  }
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key >= '0' && e.key <= '9') { inputNum(e.key); return; }
+    const map = {
+      '.': inputDot, '+': () => inputOp('+'), '-': () => inputOp('-'),
+      '*': () => inputOp('*'), 'Enter': calculate, '=': calculate,
+      'Backspace': backspace, 'Escape': allClear, 'Delete': clearEntry,
+      '%': inputPct,
+    };
+    if (e.key === '/') { e.preventDefault(); inputOp('/'); return; }
+    if (map[e.key]) { map[e.key](); }
+  });
+
+  updateDisplay();
+</script>
+</body>
+</html>
